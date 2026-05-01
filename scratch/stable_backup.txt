@@ -1,0 +1,20 @@
+// BACKUP OF STABLE SQLITE CONFIGURATION
+// TO RESTORE: Say "switch to previous"
+
+// schema.prisma
+/*
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+*/
+
+// .env
+/*
+DATABASE_URL="file:./dev.db"
+*/
+
+// lib/prisma.ts
+/*
+export const prisma = new PrismaClient({ log: ["error"] });
+*/

@@ -1,0 +1,73 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         String      @id @default(uuid())
+  email      String      @unique
+  password   String
+  name       String
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  chats      Chat[]
+  complaints Complaint[]
+}
+
+model Chat {
+  id        String    @id @default(uuid())
+  title     String
+  userId    String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  user      User      @relation(fields: [userId], references: [id])
+  messages  Message[]
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  content   String
+  role      String
+  chatId    String
+  createdAt DateTime @default(now())
+  chat      Chat     @relation(fields: [chatId], references: [id])
+}
+
+model Complaint {
+  id            String   @id @default(uuid())
+  title         String
+  description   String
+  location      String
+  status        String   @default("PENDING")
+  imageUrl      String?
+  imageAnalysis String?
+  userId        String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id])
+}
+
+model Party {
+  id           String      @id @default(uuid())
+  name         String
+  abbreviation String
+  foundedYear  Int?
+  description  String
+  candidates   Candidate[]
+}
+
+model Candidate {
+  id              String  @id @default(uuid())
+  name            String
+  constituency    String
+  partyId         String
+  criminalRecords String?
+  assets          String?
+  education       String?
+  background      String
+  party           Party   @relation(fields: [partyId], references: [id])
+}
