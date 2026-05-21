@@ -49,7 +49,7 @@ async function fetchWebSearch(query: string) {
 async function fetchWikipedia(query: string) {
   try {
     const headers = { 'User-Agent': 'Democrateach/1.0 (https://democrateach.org; contact@democrateach.org)' };
-    const wikiSearchQuery = query + " politician Indian TMC";
+    const wikiSearchQuery = query + " Indian politician";
     const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(wikiSearchQuery)}&format=json&origin=*`;
     
     const controller = new AbortController();
@@ -60,11 +60,20 @@ async function fetchWikipedia(query: string) {
     
     if (searchData.query?.search?.length > 0) {
       let bestResult = searchData.query.search[0];
-      const politicalMatch = searchData.query.search.find((s: any) => 
-        s.snippet.toLowerCase().includes("politician") || 
-        s.snippet.toLowerCase().includes("parliament") ||
-        s.snippet.toLowerCase().includes("trinamool")
-      );
+      const politicalMatch = searchData.query.search.find((s: any) => {
+        const lower = s.snippet.toLowerCase();
+        return lower.includes("politician") || 
+               lower.includes("parliament") ||
+               lower.includes("minister") ||
+               lower.includes("mla") ||
+               lower.includes("mp") ||
+               lower.includes("election") ||
+               lower.includes("political") ||
+               lower.includes("party") ||
+               lower.includes("bjp") ||
+               lower.includes("congress") ||
+               lower.includes("trinamool");
+      });
       if (politicalMatch) bestResult = politicalMatch;
 
       const pageTitle = bestResult.title;
@@ -142,18 +151,22 @@ export async function POST(request: Request) {
     const isPolitics = queryLower.includes("tmc") || queryLower.includes("bjp") || 
                         queryLower.includes("congress") || queryLower.includes("candidate") ||
                         queryLower.includes("constituency") || queryLower.includes("minister") ||
-                        queryLower.includes("who is") || queryLower.includes("about");
+                        queryLower.includes("who is") || queryLower.includes("about") ||
+                        queryLower.includes("cm") || queryLower.includes("pm") ||
+                        queryLower.includes("chief minister") || queryLower.includes("prime minister") ||
+                        queryLower.includes("governor") || queryLower.includes("election") ||
+                        queryLower.includes("party") || queryLower.includes("politician") ||
+                        queryLower.includes("cabinet") || queryLower.includes("government");
 
     console.time("RAG Operations");
     const [webResults, wikiResults] = await Promise.all([
       (isProcedure || isPolitics || coreQuery.length > 2) ? (async () => {
-        let searchQuery = `${coreQuery} Indian elections`;
-        if (isProcedure) searchQuery = `${coreQuery} official ECI NVSP portal link`;
-        if (isPolitics) searchQuery = `${coreQuery} Indian politician news candidate bio`;
+        let searchQuery = coreQuery;
+        if (isProcedure) searchQuery = `${coreQuery} official ECI NVSP portal`;
         
         const results = await Promise.all([
           fetchWebSearch(searchQuery),
-          fetchWebSearch(`${searchQuery} latest updates`)
+          fetchWebSearch(`${searchQuery} latest news updates`)
         ]);
         return results.filter(Boolean).join("\n\n");
       })() : Promise.resolve(""),
