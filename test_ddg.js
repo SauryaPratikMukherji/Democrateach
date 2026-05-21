@@ -1,5 +1,5 @@
-const https = require('https');
-const cheerio = require('cheerio');
+import https from 'https';
+import cheerio from 'cheerio';
 
 const query = "Jadavpur Lok Sabha TMC candidate 2024";
 const url = "https://html.duckduckgo.com/html/?q=" + encodeURIComponent(query);

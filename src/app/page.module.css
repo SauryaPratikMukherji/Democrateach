@@ -218,10 +218,37 @@
 @media (max-width: 1024px) {
   .hero {
     flex-direction: column;
-    padding-top: 12rem;
+    padding-top: 8rem;
     text-align: center;
   }
   .actions {
     justify-content: center;
+  }
+}
+
+@media (max-width: 600px) {
+  .hero {
+    padding-top: 6rem;
+    padding-bottom: 3rem;
+  }
+  .actions {
+    flex-direction: column;
+    width: 100%;
+    gap: 0.75rem;
+  }
+  .primaryBtn, .secondaryBtn {
+    width: 100%;
+    justify-content: center;
+  }
+  .features {
+    padding: 4rem 1rem;
+  }
+  .sectionHeader h2 {
+    font-size: 2rem;
+  }
+  .trustCard {
+    flex-direction: column;
+    text-align: center;
+    padding: 1.5rem;
   }
 }

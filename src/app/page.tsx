@@ -10,9 +10,6 @@ export default function Home() {
       <section className={styles.hero}>
         <div className={styles.heroOverlay}></div>
         <div className={styles.heroContent}>
-          <div className={`animate-fade-in ${styles.badge}`}>
-            <Zap size={14} /> <span>Powered by Gemini 2.0 Flash</span>
-          </div>
           <h1 className={`animate-slide-up delay-100 ${styles.title}`}>
             Empowering the <span className="text-gradient-patriotic">Indian Electorate</span> Through Intelligence
           </h1>

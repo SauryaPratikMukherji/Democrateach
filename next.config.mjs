@@ -4,6 +4,7 @@ const nextConfig = {
     buildActivity: false,
     appIsrStatus: false,
   },
+  output: 'standalone',
 };
 
 export default nextConfig;
