@@ -46,11 +46,10 @@ async function fetchWebSearch(query: string) {
   }
 }
 
-async function fetchWikipedia(query: string) {
+async function fetchWikipedia(query: string): Promise<string> {
   try {
     const headers = { 'User-Agent': 'Democrateach/1.0 (https://democrateach.org; contact@democrateach.org)' };
-    const wikiSearchQuery = query + " Indian politician";
-    const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(wikiSearchQuery)}&format=json&origin=*`;
+    const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
     
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), 5000);
@@ -58,36 +57,49 @@ async function fetchWikipedia(query: string) {
     const searchData = await searchRes.json();
     clearTimeout(id);
     
-    if (searchData.query?.search?.length > 0) {
-      let bestResult = searchData.query.search[0];
-      const politicalMatch = searchData.query.search.find((s: any) => {
-        const lower = s.snippet.toLowerCase();
-        return lower.includes("politician") || 
-               lower.includes("parliament") ||
-               lower.includes("minister") ||
-               lower.includes("mla") ||
-               lower.includes("mp") ||
-               lower.includes("election") ||
-               lower.includes("political") ||
-               lower.includes("party") ||
-               lower.includes("bjp") ||
-               lower.includes("congress") ||
-               lower.includes("trinamool");
-      });
-      if (politicalMatch) bestResult = politicalMatch;
-
-      const pageTitle = bestResult.title;
-      const extractUrl = `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro&explaintext&titles=${encodeURIComponent(pageTitle)}&format=json&origin=*`;
-      const extractController = new AbortController();
-      const extractId = setTimeout(() => extractController.abort(), 5000);
-      const extractRes = await fetch(extractUrl, { headers, signal: extractController.signal });
-      const extractData = await extractRes.json();
-      clearTimeout(extractId);
-      const pages = extractData.query.pages;
-      const pageId = Object.keys(pages)[0];
-      return pages[pageId].extract || "";
+    const results = searchData.query?.search || [];
+    if (results.length === 0) return "";
+    
+    const targetTitles: string[] = [];
+    for (const item of results) {
+      const title = item.title;
+      const snippet = (item.snippet || "").toLowerCase();
+      const isDisambig = title.toLowerCase().includes("(disambiguation)") || 
+                         snippet.includes("may refer to") ||
+                         snippet.includes("refer to:");
+      if (!isDisambig) {
+        targetTitles.push(title);
+      }
+      if (targetTitles.length >= 3) break;
     }
-    return "";
+    
+    if (targetTitles.length === 0) {
+      targetTitles.push(results[0].title);
+    }
+    
+    const extractPromises = targetTitles.map(async (title) => {
+      try {
+        const extractUrl = `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro&explaintext&titles=${encodeURIComponent(title)}&format=json&origin=*`;
+        const extractController = new AbortController();
+        const extractId = setTimeout(() => extractController.abort(), 5000);
+        const extractRes = await fetch(extractUrl, { headers, signal: extractController.signal });
+        const extractData = await extractRes.json();
+        clearTimeout(extractId);
+        const pages = extractData.query.pages;
+        const pageId = Object.keys(pages)[0];
+        const extract = pages[pageId].extract || "";
+        if (extract.trim()) {
+          return `--- Wikipedia: ${title} ---\n${extract.trim()}`;
+        }
+        return "";
+      } catch (err) {
+        console.error(`[WIKI EXTRACT ERROR] for title "${title}":`, err);
+        return "";
+      }
+    });
+    
+    const extracts = await Promise.all(extractPromises);
+    return extracts.filter(Boolean).join("\n\n");
   } catch (error) {
     console.error("[WIKI] Error:", error);
     return "";
@@ -170,7 +182,7 @@ export async function POST(request: Request) {
         ]);
         return results.filter(Boolean).join("\n\n");
       })() : Promise.resolve(""),
-      (isPolitics && coreQuery.length > 2) ? fetchWikipedia(coreQuery) : Promise.resolve("")
+      ((isPolitics || coreQuery.length > 3) && !isProcedure) ? fetchWikipedia(coreQuery) : Promise.resolve("")
     ]);
     console.timeEnd("RAG Operations");
     console.timeEnd("Chat DB Operations");
