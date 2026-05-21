@@ -11,14 +11,14 @@ export async function POST() {
 
     // Simulate fetching from a Live Electoral Database (Mocking new data arriving)
     const newLiveCandidates = [
-      { name: 'Narendra Modi', constituency: 'Varanasi, UP', partyId: getPartyId('BJP'), criminalRecords: 'None declared', assets: '₹3+ Crore', education: 'Post Graduate (MA)', background: 'Current Prime Minister of India. Leading the 2026 Digital India Initiative.' },
-      { name: 'Rahul Gandhi', constituency: 'Wayanad, Kerala', partyId: getPartyId('INC'), criminalRecords: '18 cases pending', assets: '₹20+ Crore', education: 'M.Phil', background: 'Former President of INC. Key leader of the 2026 Secular Front.' },
-      { name: 'Mamata Banerjee', constituency: 'Bhabanipur, WB', partyId: getPartyId('AITC'), criminalRecords: 'None declared', assets: '₹16 Lakh', education: 'LLB, MA', background: 'Chief Minister of West Bengal. Spearheading state-level digital reforms.' },
-      { name: 'K. Annamalai', constituency: 'Coimbatore, TN', partyId: getPartyId('BJP'), criminalRecords: 'None declared', assets: '₹2+ Crore', education: 'MBA (IIM Lucknow)', background: 'Former IPS Officer. President of BJP Tamil Nadu.' },
-      { name: 'Priyanka Gandhi Vadra', constituency: 'Raebareli, UP', partyId: getPartyId('INC'), criminalRecords: 'None declared', assets: '₹4+ Crore', education: 'BA Psychology', background: 'General Secretary of the All India Congress Committee.' },
-      { name: 'Supriya Sule', constituency: 'Baramati, Maharashtra', partyId: getPartyId('NCP'), criminalRecords: 'None declared', assets: '₹140+ Crore', education: 'B.Sc Microbiology', background: 'Prominent Parliamentarian.' },
-      { name: 'Asaduddin Owaisi', constituency: 'Hyderabad, Telangana', partyId: getPartyId('AIMIM'), criminalRecords: '5 cases pending', assets: '₹13+ Crore', education: 'LLB (London)', background: 'President of AIMIM.' },
-      { name: 'Tejasvi Surya', constituency: 'Bangalore South, Karnataka', partyId: getPartyId('BJP'), criminalRecords: '2 cases pending', assets: '₹4+ Crore', education: 'LLB', background: 'National President of BJP Yuva Morcha.' }
+      { name: 'Narendra Modi', constituency: 'Varanasi, Uttar Pradesh', partyId: getPartyId('BJP'), criminalRecords: 'None declared', assets: '₹3+ Crore', education: 'Post Graduate (MA)', background: 'Current Prime Minister of India. Leading the 2026 Digital India Initiative. Representing Varanasi in Lok Sabha.' },
+      { name: 'Rahul Gandhi', constituency: 'Raebareli, Uttar Pradesh', partyId: getPartyId('INC'), criminalRecords: '18 cases pending', assets: '₹20+ Crore', education: 'M.Phil', background: 'Former President of INC. Key leader of the 2026 Secular Front. Representing Raebareli in Lok Sabha.' },
+      { name: 'Mamata Banerjee', constituency: 'Bhabanipur, West Bengal', partyId: getPartyId('AITC'), criminalRecords: 'None declared', assets: '₹16 Lakh', education: 'LLB, MA', background: 'Chief Minister of West Bengal. Spearheading state-level digital reforms. MLA representing Bhabanipur.' },
+      { name: 'K. Annamalai', constituency: 'Coimbatore, Tamil Nadu', partyId: getPartyId('BJP'), criminalRecords: 'None declared', assets: '₹2+ Crore', education: 'MBA (IIM Lucknow)', background: 'Former IPS Officer. President of BJP Tamil Nadu. Contested Coimbatore in Lok Sabha.' },
+      { name: 'Priyanka Gandhi Vadra', constituency: 'Wayanad, Kerala', partyId: getPartyId('INC'), criminalRecords: 'None declared', assets: '₹4+ Crore', education: 'BA Psychology', background: 'General Secretary of the All India Congress Committee. Representing Wayanad in Lok Sabha.' },
+      { name: 'Supriya Sule', constituency: 'Baramati, Maharashtra', partyId: getPartyId('NCP'), criminalRecords: 'None declared', assets: '₹140+ Crore', education: 'B.Sc Microbiology', background: 'Prominent Parliamentarian. Representing Baramati in Lok Sabha.' },
+      { name: 'Asaduddin Owaisi', constituency: 'Hyderabad, Telangana', partyId: getPartyId('AIMIM'), criminalRecords: '5 cases pending', assets: '₹13+ Crore', education: 'LLB (London)', background: 'President of AIMIM. Representing Hyderabad in Lok Sabha.' },
+      { name: 'Tejasvi Surya', constituency: 'Bangalore South, Karnataka', partyId: getPartyId('BJP'), criminalRecords: '2 cases pending', assets: '₹4+ Crore', education: 'LLB', background: 'National President of BJP Yuva Morcha. Representing Bangalore South in Lok Sabha.' }
     ];
 
     // Ensure NCP and AIMIM parties exist before adding their candidates

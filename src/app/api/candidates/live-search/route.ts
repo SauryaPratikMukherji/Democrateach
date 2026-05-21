@@ -31,6 +31,66 @@ async function fetchWebSearch(query: string) {
   }
 }
 
+async function getConstituencyWikiData(constituency: string, type: string): Promise<string> {
+  try {
+    const headers = { 'User-Agent': 'Democrateach/1.0 (https://democrateach.org; contact@democrateach.org)' };
+    const searchQuery = `${constituency} ${type === "Lok Sabha" ? "Lok Sabha" : "Assembly"} constituency`;
+    const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(searchQuery)}&format=json&origin=*`;
+    
+    const searchRes = await fetch(searchUrl, { headers });
+    const searchData = await searchRes.json();
+    const results = searchData.query?.search || [];
+    if (results.length === 0) return "";
+    
+    const constituencyLower = constituency.toLowerCase();
+    const isLokSabha = type === "Lok Sabha";
+    const bestResult = results.find((r: any) => {
+      const titleLower = r.title.toLowerCase();
+      const matchesConstituency = titleLower.includes(constituencyLower);
+      const matchesTier = isLokSabha
+        ? (titleLower.includes("lok sabha") || titleLower.includes("parliamentary") || titleLower.includes("mp"))
+        : (titleLower.includes("assembly") || titleLower.includes("vidhan sabha") || titleLower.includes("legislative") || titleLower.includes("mla"));
+      return matchesConstituency && matchesTier;
+    }) || results.find((r: any) => r.title.toLowerCase().includes(constituencyLower)) || results[0];
+    const bestTitle = bestResult.title;
+    
+    const wikiPageUrl = `https://en.wikipedia.org/wiki/${encodeURIComponent(bestTitle.replace(/ /g, '_'))}`;
+    
+    const pageRes = await fetch(wikiPageUrl, { headers });
+    const html = await pageRes.text();
+    const $ = cheerio.load(html);
+    
+    const tablesText: string[] = [];
+    let currentHeading = "";
+    
+    $('.mw-parser-output').find('h2, h3, h4, table.wikitable').each((i, el) => {
+      const tagName = el.tagName ? el.tagName.toLowerCase() : "";
+      if (['h2', 'h3', 'h4'].includes(tagName)) {
+        currentHeading = $(el).text().trim().replace(/\[edit\]/g, '');
+      } else if (tagName === 'table' && $(el).hasClass('wikitable')) {
+        const rows: string[] = [];
+        $(el).find('tr').each((j, rEl) => {
+          const cells: string[] = [];
+          $(rEl).find('td, th').each((k, cellEl) => {
+            cells.push($(cellEl).text().trim().replace(/\s+/g, ' '));
+          });
+          if (cells.length > 0) {
+            rows.push(cells.join(" | "));
+          }
+        });
+        if (rows.length > 0) {
+          tablesText.push(`### Section: ${currentHeading}\n` + rows.slice(0, 15).join("\n"));
+        }
+      }
+    });
+    
+    return tablesText.join("\n\n");
+  } catch (err) {
+    console.error("[WIKI PARSE ERROR]:", err);
+    return "";
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const { state, city, constituency, type } = await request.json();
@@ -45,7 +105,6 @@ export async function POST(request: Request) {
     if (cached) return NextResponse.json(cached);
 
     // Step 1: Chronologically Enforced Multi-Search (Temporal Lock: 2026)
-    const currentDate = "May 1, 2026";
     const searchTasks = [
       `intitle:2026 ${constituency} ${type} election candidates list`,
       `final contestants list ${constituency} ${state} assembly election April 2026`,
@@ -53,36 +112,61 @@ export async function POST(request: Request) {
       `latest news candidates for ${constituency} ${state} 2026 election cycle`
     ];
     
-    const contextResults = await Promise.all(searchTasks.map(q => fetchWebSearch(q)));
-    const liveContext = contextResults.filter(Boolean).join("\n---\n");
+    // Fetch Web Search and Wikipedia Constituency page HTML in parallel!
+    const [webResults, wikiResults] = await Promise.all([
+      Promise.all(searchTasks.map(q => fetchWebSearch(q))),
+      getConstituencyWikiData(constituency, type)
+    ]);
+    
+    const liveContext = [
+      wikiResults ? `### WIKIPEDIA CONSTITUENCY DATA & ELECTION TABLES:\n${wikiResults}` : "",
+      webResults.filter(Boolean).length > 0 ? `### LIVE WEB SEARCH SNIPPETS:\n${webResults.filter(Boolean).join("\n---\n")}` : ""
+    ].filter(Boolean).join("\n\n");
 
     const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite-preview" });
 
-    const prompt = `You are a Senior Forensic Data Analyst specialized in the 2026 Indian Elections. 
-Current Date: ${currentDate}.
-Your mission is to provide the EXACT candidate list for the ${type} election in "${constituency}", ${state} that just occurred in April 2026.
+    // Determine the expected latest election cycle year for constraints
+    let expectedYear = "2026";
+    if (type === "Lok Sabha") {
+      expectedYear = "2024";
+    } else if (state === "Uttar Pradesh") {
+      expectedYear = "2022";
+    } else if (state === "Maharashtra") {
+      expectedYear = "2024";
+    } else if (state === "Gujarat") {
+      expectedYear = "2022";
+    } else if (state === "Karnataka") {
+      expectedYear = "2023";
+    } else if (state === "Delhi") {
+      expectedYear = "2025";
+    }
 
-### SURGICAL LIVE DATA (MANDATORY 2026 FOCUS):
-${liveContext}
+    const prompt = `You are a Senior Political Data Analyst specialized in Indian Elections. 
+Current Date: May 1, 2026.
+Your mission is to provide the EXACT candidate list for the "${constituency}" constituency (${type} election tier) in ${state}.
+
+We are targeting the most recent election cycle.
+- Election Tier: ${type}
+- Target/Expected Election Year: ${expectedYear} (For Vidhan Sabha/Assembly, this matches the state's latest assembly election. For Lok Sabha, this is the 2024 general election).
+
+### ELECTORAL DATA CONTEXT (WIKIPEDIA TABLES & WEB SNIPPETS):
+${liveContext || "No context data retrieved."}
 
 ### RIGID ACCURACY PROTOCOLS:
-1. CHRONOLOGICAL LOCK: You MUST only return candidates who are explicitly linked to the "2026" cycle in the snippets. 
-2. REJECT 2021 DATA: If a snippet mentions 2021 candidates (e.g., Rinku Naskar, Sujan Chakraborty), you MUST REJECT THEM immediately.
-3. VERIFIED 2026 CONTENDERS: For "${constituency}" West Bengal, the 2026 candidates are:
-   - TMC: Debabrata Majumdar (Malay)
-   - CPIM: Bikash Ranjan Bhattacharya (or Srijan if confirmed for 2026)
-   - BJP: Sarbori Mukherjee (or the latest 2026 nominee)
-4. PARTY SLOTTING: Identify one candidate for TMC, BJP, and CPIM/Left Front from the 2026 snippets.
-5. NO HALLUCINATION: If the snippets for 2026 are empty, return [].
+1. TARGET ELECTION YEAR: You MUST prioritize extracting candidate names from the latest election table matching the target year (${expectedYear}).
+2. REJECT PREVIOUS ELECTIONS: You MUST NOT return candidates from older election cycles (e.g. if target year is 2026, reject candidates who ran in 2021 but did not contest in 2026, unless they contested in both).
+3. DETECT PARTY REPRESENTATIVES: For the target election, extract one candidate representing each major contesting party (e.g., BJP, TMC, INC, CPIM, AAP, etc.) as listed in the results table or context.
+4. NO HALLUCINATION: Extract candidate details ONLY from the provided Wikipedia tables and web snippets. If the context has no records for the constituency, return an empty array [].
+5. SEPARATE TIERS: Do not mix Lok Sabha (MP) candidates and Vidhan Sabha (MLA) candidates. Use only the data that matches the requested tier (${type}).
 
 ### DATA STRUCTURE:
 Return a JSON array of candidate objects:
-   - name: FULL LEGAL NAME
+   - name: FULL LEGAL NAME of the candidate
    - party: Full Political Party Name
-   - partyAbbr: Abbreviation (BJP, INC, TMC, AAP, CPIM, etc.)
-   - background: Professional background specifically for the 2026 campaign.
+   - partyAbbr: Abbreviation (e.g. BJP, INC, TMC, AAP, CPIM, DMK, SP, etc.)
+   - background: A brief professional background or description of the candidate based on the context.
 
-CRITICAL: Return ONLY raw JSON. NO conversation. NO historical fallbacks.`;
+CRITICAL: Return ONLY raw JSON. Do not include markdown code block syntax (like \`\`\`json). Do not write any conversational text. Return exactly a valid JSON array or [].`;
 
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }] }]
